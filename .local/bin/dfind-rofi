@@ -1,0 +1,40 @@
+#!/bin/bash
+
+# Define all relevant .desktop paths
+paths=(
+  ~/.local/share/applications
+  /usr/share/applications
+  ~/.config/autostart
+  /etc/xdg/autostart
+)
+
+# Collect entries as "Name | /path/to/file.desktop"
+mapfile -t entries < <(
+  find "${paths[@]}" -type f -name "*.desktop" 2>/dev/null |
+  while read -r file; do
+    name=$(grep -m1 '^Name=' "$file" | cut -d= -f2-)
+    [ -z "$name" ] && name=$(basename "$file")
+    echo "$name | $file"
+  done | sort
+)
+
+# If no entries, bail
+[ ${#entries[@]} -eq 0 ] && {
+  echo "No .desktop files found." >&2
+  exit 1
+}
+
+# Launch rofi with overridden matching mode
+choice=$(printf '%s\n' "${entries[@]}" | rofi -dmenu -i \
+  -p "Edit .desktop file" \
+  -matching normal \
+  -sort true \
+  -lines 12 \
+  -font "Figtree 13" \
+)
+
+# Extract file path from selection
+selected_file=$(cut -d'|' -f2- <<< "$choice" | sed 's/^ *//')
+
+# Open with code if valid selection
+[[ -n "$selected_file" ]] && code "$selected_file"
