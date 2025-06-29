@@ -1,25 +1,2 @@
-#!/bin/bash
-
-# Check if an argument is provided
-if [ -z "$1" ]; then
-    echo "Usage: desktop-find <app-name-part>"
-    exit 1
-fi
-
-# Escape regex special characters
-escaped=$(printf '%s\n' "$1" | sed -E 's/[][\.^$*+?{}()|\\/]/\\&/g')
-
-# Search paths
-paths=(
-  ~/.local/share/applications
-  /usr/share/applications
-  ~/.config/autostart
-  /etc/xdg/autostart
-)
-
-
-# Search by filename OR Name= field
-find "${paths[@]}" -type f -name "*.desktop" \( \
-    -iname "*$1*.desktop" -print -o \
-    -exec grep -iq "Name=.*$escaped" {} \; -print \
-\)
+#!/bin/sh
+exec dctl dfind "$@"

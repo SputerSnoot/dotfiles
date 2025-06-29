@@ -1,0 +1,169 @@
+#!/usr/bin/env python3
+
+import argparse
+import subprocess
+import tempfile
+import shutil
+import filecmp
+from pathlib import Path
+
+def get_files(paths):
+    files = []
+    for path in paths:
+        if not path.exists():
+            continue
+        files.extend(path.rglob("*.desktop"))
+    return files
+
+def score_file(file: Path, query: str) -> int:
+    name_lower = file.name.lower()
+    query_lower = query.lower()
+
+    if name_lower.startswith(query_lower):
+        return 3
+    elif query_lower in name_lower:
+        return 2
+    else:
+        try:
+            with file.open("r", encoding="utf-8") as f:
+                for line in f:
+                    if line.lower().startswith("name=") and query_lower in line.lower():
+                        return 1
+        except Exception:
+            pass
+    return 0
+
+def find_files(query: str, paths):
+    matches = []
+    files = get_files(paths)
+    for f in files:
+        score = score_file(f, query)
+        if score > 0:
+            matches.append((score, f))
+
+    matches.sort(key=lambda x: (-x[0], str(x[1])))
+    return matches
+
+def print_match_name_line_one_line(file: Path):
+    name_line = ""
+    try:
+        with file.open("r", encoding="utf-8") as f:
+            for line in f:
+                lower_line = line.lower()
+                if lower_line.startswith("name=") or lower_line.startswith("name["):
+                    name_line = line.strip()
+                    break
+    except Exception:
+        name_line = "(could not read file)"
+    return name_line
+
+# def print_matches(matches):
+#     for _, file in matches:
+#         name_line = print_match_name_line_one_line(file)
+#         print(f" {file} > {name_line}")
+
+def print_matches_table(matches):
+    # First, find the max length of the filename strings for padding
+    max_len = max(len(str(file)) for _, file in matches)
+
+    for _, file in matches:
+        name_line = print_match_name_line_one_line(file)  # reuse your existing func
+        # Pad filename to max_len, then add ' > ' and the name line
+        print(f"  {str(file).ljust(max_len)} > {name_line}")
+
+
+def edit_file(query: str, search_paths, local_dir):
+    matches = find_files(query, search_paths)
+
+    if not matches:
+        print(f"No .desktop file found matching '{query}'")
+        return
+
+    best_match = matches[0][1]
+    local_path = local_dir / best_match.name
+    local_path.parent.mkdir(parents=True, exist_ok=True)
+
+    print(f"Found file: {best_match}")
+    print(f"Override will be: {local_path}")
+
+    with tempfile.NamedTemporaryFile(mode='w+', delete=False, suffix=".desktop") as tmp:
+        tmp_path = Path(tmp.name)
+        tmp.write(best_match.read_text())
+        tmp.flush()
+
+    print(f"Opening temporary edit session: {tmp_path}")
+    subprocess.call(["code", "--wait", str(tmp_path)])
+
+    if not tmp_path.exists():
+        print("Temp file disappeared; aborting.")
+        return
+
+    if filecmp.cmp(tmp_path, best_match, shallow=False):
+        print("No changes made; nothing saved.")
+        tmp_path.unlink()
+        return
+
+    shutil.move(str(tmp_path), str(local_path))
+    print(f"Saved to: {local_path}")
+
+def dfind(query: str):
+    app_paths = [
+        Path.home() / ".local/share/applications",
+        Path("/usr/share/applications"),
+    ]
+    matches = find_files(query, app_paths)
+    print_matches_table(matches)
+
+def dedit(query: str):
+    app_paths = [
+        Path.home() / ".local/share/applications",
+        Path("/usr/share/applications"),
+    ]
+    local_dir = Path.home() / ".local/share/applications"
+    edit_file(query, app_paths, local_dir)
+
+def afind(query: str):
+    autostart_paths = [
+        Path.home() / ".config/autostart",
+        Path("/etc/xdg/autostart"),
+    ]
+    matches = find_files(query, autostart_paths)
+    print_matches_table(matches)
+
+def aedit(query: str):
+    autostart_paths = [
+        Path.home() / ".config/autostart",
+        Path("/etc/xdg/autostart"),
+    ]
+    local_dir = Path.home() / ".config/autostart"
+    edit_file(query, autostart_paths, local_dir)
+
+def main():
+    parser = argparse.ArgumentParser(description=".desktop file finder and editor")
+    subparsers = parser.add_subparsers(dest="command", required=True)
+
+    parser_dfind = subparsers.add_parser("dfind", help="Find desktop applications")
+    parser_dfind.add_argument("query")
+
+    parser_dedit = subparsers.add_parser("dedit", help="Edit desktop application override")
+    parser_dedit.add_argument("query")
+
+    parser_afind = subparsers.add_parser("afind", help="Find autostart entries")
+    parser_afind.add_argument("query")
+
+    parser_aedit = subparsers.add_parser("aedit", help="Edit autostart override")
+    parser_aedit.add_argument("query")
+
+    args = parser.parse_args()
+
+    if args.command == "dfind":
+        dfind(args.query)
+    elif args.command == "dedit":
+        dedit(args.query)
+    elif args.command == "afind":
+        afind(args.query)
+    elif args.command == "aedit":
+        aedit(args.query)
+
+if __name__ == "__main__":
+    main()

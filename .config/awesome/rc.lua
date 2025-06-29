@@ -483,6 +483,10 @@ clientbuttons = gears.table.join(
     end)
 )
 
+function placement_telegram_media(d, args)
+    return {0,0,400,400}
+end
+
 -- Set keys
 root.keys(globalkeys)
 -- }}}
@@ -501,7 +505,7 @@ awful.rules.rules = {
             keys = clientkeys,
             buttons = clientbuttons,
             screen = awful.screen.preferred,
-            placement = awful.placement.no_overlap + awful.placement.no_offscreen
+            placement = awful.placement.no_overlap + awful.placement.no_offscreen + awful.placement.under_mouse
         }
     },
 
@@ -551,8 +555,9 @@ awful.rules.rules = {
     -- Ayugram + Telegram Desktop
     {
         rule_any = { name = { "Media viewer" } },
-        properties = { fullscreen = false, maximized = false, titlebars_enabled = false, floating = true }
+        properties = { placement = function() end }
     },
+    
     -- Set Firefox to always map on the tag named "2" on screen 1.
     -- { rule = { class = "Firefox" },
     --   properties = { screen = 1, tag = "2" } },
