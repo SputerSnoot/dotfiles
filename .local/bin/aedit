@@ -1,2 +1,2 @@
 #!/bin/sh
-exec dctl aedit "$@"
+exec dctl "$(basename "$0")" "$@"

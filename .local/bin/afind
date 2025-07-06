@@ -1,2 +1,2 @@
 #!/bin/sh
-exec dctl afind "$@"
+exec dctl "$(basename "$0")" "$@"
