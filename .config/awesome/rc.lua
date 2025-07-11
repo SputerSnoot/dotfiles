@@ -372,7 +372,9 @@ globalkeys = gears.table.join(
     awful.key({ modkey, "Shift", "Control"   }, "c", function () awful.util.spawn('wl copy') end,
               {description = "wayland copy", group = "utilities"}),
     awful.key({ modkey, "Shift", "Control"   }, "v", function () awful.util.spawn('wl paste') end,
-              {description = "wayland paste", group = "utilities"})
+              {description = "wayland paste", group = "utilities"}),
+    awful.key({ modkey }, "`", function () awful.util.spawn('toggle_amnezia.sh') end,
+              {description = "Toggle VPN", group = "utilities"})
 )
 
 clientkeys = gears.table.join(
@@ -627,18 +629,32 @@ end)
 client.connect_signal("focus", function(c) c.border_color = beautiful.border_focus end)
 client.connect_signal("unfocus", function(c) c.border_color = beautiful.border_normal end)
 
--- -- Decrease niceness for focused client (higher CPU priority)
+-- -- -- Decrease niceness for focused client (higher CPU priority)
+-- client.connect_signal("focus", function(c)
+--     if c and c.pid then
+--         awful.spawn("renice -n -9 -p " .. c.pid, false)
+--     end
+-- end)
+
+-- -- Reset niceness when clients lose focus (optional)
+-- client.connect_signal("unfocus", function(c)
+--     if c and c.pid then
+--         awful.spawn("renice -n 0 -p " .. c.pid, false)
+--     end
+-- end)
+
+
+-- Boost entire process group on focus
 client.connect_signal("focus", function(c)
     if c and c.pid then
-        -- Renice to -5 (higher priority)
-        awful.spawn("renice -n -9 -p " .. c.pid, false)
+        awful.spawn('sh -c "renice -n -9 -g $(ps -o pgid= -p ' .. c.pid .. ' | tr -d \'\')"', false)
     end
 end)
 
--- Reset niceness when clients lose focus (optional)
+-- Reset process group on unfocus
 client.connect_signal("unfocus", function(c)
     if c and c.pid then
-        awful.spawn("renice -n 0 -p " .. c.pid, false)
+        awful.spawn('sh -c "renice -n 0 -g $(ps -o pgid= -p ' .. c.pid .. ' | tr -d \'\')"', false)
     end
 end)
 
