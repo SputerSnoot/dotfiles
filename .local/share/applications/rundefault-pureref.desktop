@@ -1,0 +1,13 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=PureRef Default
+GenericName=Open default ref
+Comment=PureRef - Simple and lightweight reference image viewer.
+Exec=PureRef "/home/sputer/documents/default.pur"
+Terminal=false
+Icon=pureref
+Categories=Graphics;
+MimeType=application/pureref;
+StartupNotify=true
+Name[en_GB]=rundefault-pureref.desktop
