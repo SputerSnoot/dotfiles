@@ -1,0 +1,23 @@
+#!/bin/bash
+
+UUID="8EB7-7BF3"
+SRC_DEVICE="/dev/disk/by-uuid/$UUID"
+USER_NAME=$(whoami)
+MOUNT_POINT="/run/media/$USER_NAME/$UUID"
+SRC_DIR="$MOUNT_POINT/DCIM/100PHOTO"
+DEST_DIR="/home/$USER_NAME/pictures/SamsungNXmini"
+
+# Check if already mounted
+if ! mount | grep -q "$MOUNT_POINT"; then
+    echo "Mounting device..."
+    udisksctl mount -b "$SRC_DEVICE"
+fi
+
+# Verify source directory
+if [ ! -d "$SRC_DIR" ]; then
+    echo "Source directory not found: $SRC_DIR"
+    exit 1
+fi
+
+# Sync files
+rsync -av "$SRC_DIR/" "$DEST_DIR/"
