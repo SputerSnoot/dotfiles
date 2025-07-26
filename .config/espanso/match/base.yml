@@ -1,0 +1,16 @@
+matches:
+- trigger: :espanso
+  replace: Hi there!
+- trigger: :date
+  replace: '{{date}}'
+  vars:
+    - name: date
+      type: date
+      params:
+        format: "%Y-%m-%d"
+- trigger: :shell
+  replace: '{{output}}'
+- trigger: :'
+  replace: «
+- trigger: :"
+  replace: »

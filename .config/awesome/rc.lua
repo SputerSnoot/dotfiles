@@ -107,7 +107,8 @@ mykeyboardlayout = awful.widget.keyboardlayout()
 
 -- {{{ Wibar
 -- Create a textclock widget
-mytextclock = wibox.widget.textclock()
+local mytextclock = wibox.widget.textclock("%H:%M:%S %B %A %Y-%m-%d %j ", 1)
+
 
 -- Create a wibox for each screen and add it
 local taglist_buttons = gears.table.join(
@@ -359,11 +360,13 @@ globalkeys = gears.table.join(
     --           {description = "Raise volume", group = "utilities"}),
     -- awful.key({}, "XF86AudioLowerVolume", function () awful.util.spawn('wpctl set-volume @DEFAULT_SINK@ 5%-') end,
     --           {description = "Lower volume", group = "utilities"}),
-    awful.key({ modkey }, "a", function () awful.util.spawn('sh -c "ayugram-desktop || telegram-desktop"') end,
+    awful.key({ modkey }, "a", function () awful.util.spawn('sh -c "AyuGram || Telegram"') end,
               {description = "xrandr_screens_rotated.sh", group = "utilities"}),
     awful.key({ modkey }, "z", function () awful.util.spawn('boomer') end,
               {description = "boomer zoom", group = "utilities"}),
     awful.key({ modkey, "Shift" }, "s", function () awful.util.spawn('scrot-snip.sh') end,
+              {description = "Scrot snip", group = "utilities"}),
+    awful.key({ modkey, "Shift", "Control"   }, "s", function () awful.util.spawn('ocr-digits.sh') end,
               {description = "Scrot snip", group = "utilities"}),
     awful.key({ modkey, "Shift"   }, "k", function () awful.util.spawn('shutdown -h now') end,
               {description = "shutdown", group = "utilities"}),
@@ -392,7 +395,7 @@ clientkeys = gears.table.join(
               {description = "move to master", group = "client"}),
     awful.key({ modkey,           }, "o",      function (c) c:move_to_screen()               end,
               {description = "move to screen", group = "client"}),
-    awful.key({ modkey,           }, "t",      function (c) c.ontop = not c.ontop            end,
+    awful.key({ modkey, "Shift",  }, "t",      function (c) c.ontop = not c.ontop            end,
               {description = "toggle keep on top", group = "client"}),
     awful.key({ modkey,           }, "n",
         function (c)
@@ -657,6 +660,9 @@ client.connect_signal("unfocus", function(c)
         awful.spawn('sh -c "renice -n 0 -g $(ps -o pgid= -p ' .. c.pid .. ' | tr -d \'\')"', false)
     end
 end)
+
+awful.spawn("picom")
+-- awful.spawn({"dex", "-a"})
 
 -- Enhanced version with debug notifications
 -- client.connect_signal("focus", function(c)
