@@ -314,7 +314,7 @@ globalkeys = gears.table.join(
     awful.key({ modkey,           }, "space", function () awful.layout.inc( 1)                end,
               {description = "select next", group = "layout"}),
     awful.key({ modkey, "Shift"   }, "space", function () awful.layout.inc(-1)                end,
-              {description = "sgelect previous", group = "layout"}),
+              {description = "select previous", group = "layout"}),
 
     awful.key({ modkey, "Control" }, "n",
               function ()
@@ -348,36 +348,36 @@ globalkeys = gears.table.join(
 
     -- CUSTOM MY OWN STUFF HERE
 
-    awful.key({ modkey }, "b", function () awful.util.spawn('zen-browser') end,
+    awful.key({ modkey }, "b", function () awful.spawn('zen-browser') end,
               {description = "show the browser", group = "utilities"}),
-    awful.key({ modkey }, "e", function () awful.util.spawn('nemo') end,
+    awful.key({ modkey }, "e", function () awful.spawn('nemo') end,
               {description = "nemo", group = "utilities"}),
-    awful.key({ modkey }, "9", function () awful.util.spawn('xrandr_screens_normal.sh') end,
-              {description = "xrandr_screens_normal.sh", group = "utilities"}),
-    awful.key({ modkey }, "0", function () awful.util.spawn('xrandr_screens_rotated.sh') end,
-              {description = "xrandr_screens_rotated.sh", group = "utilities"}),
-    -- awful.key({}, "XF86AudioRaiseVolume", function () awful.util.spawn('wpctl set-volume @DEFAULT_SINK@ 5%+') end,
+    awful.key({ modkey }, "0", function () awful.spawn('togglectl xrandr-screens') end,
+              {description = "toggle rotated/normal screen", group = "utilities"}),
+    -- awful.key({}, "XF86AudioRaiseVolume", function () awful.spawn('wpctl set-volume @DEFAULT_SINK@ 5%+') end,
     --           {description = "Raise volume", group = "utilities"}),
-    -- awful.key({}, "XF86AudioLowerVolume", function () awful.util.spawn('wpctl set-volume @DEFAULT_SINK@ 5%-') end,
+    -- awful.key({}, "XF86AudioLowerVolume", function () awful.spawn('wpctl set-volume @DEFAULT_SINK@ 5%-') end,
     --           {description = "Lower volume", group = "utilities"}),
-    awful.key({ modkey }, "a", function () awful.util.spawn('sh -c "AyuGram || Telegram"') end,
-              {description = "xrandr_screens_rotated.sh", group = "utilities"}),
-    awful.key({ modkey }, "z", function () awful.util.spawn('boomer') end,
+    awful.key({ modkey }, "a", function () awful.spawn('sh -c "AyuGram || Telegram"') end,
+              {description = "AyuGram or Telegram", group = "utilities"}),
+    awful.key({ modkey }, "z", function () awful.spawn.with_shell('boomer') end,
               {description = "boomer zoom", group = "utilities"}),
-    awful.key({ modkey, "Shift" }, "s", function () awful.util.spawn('scrot-snip.sh') end,
+    awful.key({ modkey, "Shift" }, "s", function () awful.spawn('scrot-snip.sh') end,
               {description = "Scrot snip", group = "utilities"}),
-    awful.key({ modkey, "Shift", "Control"   }, "s", function () awful.util.spawn('ocr-digits.sh') end,
+    awful.key({ modkey, "Shift", "Control"   }, "s", function () awful.spawn('ocr-digits.sh') end,
               {description = "Scrot snip", group = "utilities"}),
-    awful.key({ modkey, "Shift"   }, "k", function () awful.util.spawn('shutdown -h now') end,
+    awful.key({ modkey, "Shift"   }, "k", function () awful.spawn('shutdown -h now') end,
               {description = "shutdown", group = "utilities"}),
-    awful.key({ modkey, "Shift", "Control"   }, "r", function () awful.util.spawn('reboot') end,
+    awful.key({ modkey, "Shift", "Control"   }, "r", function () awful.spawn('reboot') end,
               {description = "reboot", group = "utilities"}),
-    awful.key({ modkey, "Shift", "Control"   }, "c", function () awful.util.spawn('wl copy') end,
+    awful.key({ modkey, "Shift", "Control"   }, "c", function () awful.spawn('wl copy') end,
               {description = "wayland copy", group = "utilities"}),
-    awful.key({ modkey, "Shift", "Control"   }, "v", function () awful.util.spawn('wl paste') end,
+    awful.key({ modkey, "Shift", "Control"   }, "v", function () awful.spawn('wl paste') end,
               {description = "wayland paste", group = "utilities"}),
-    awful.key({ modkey }, "`", function () awful.util.spawn('toggle_amnezia.sh') end,
-              {description = "Toggle VPN", group = "utilities"})
+    awful.key({ modkey }, "`", function () awful.spawn('togglectl amnezia') end,
+              {description = "Toggle VPN", group = "utilities"}),
+    awful.key({ modkey, "Shift", "Control" , "Mod1" }, "l", function () awful.spawn('togglectl activate-linux') end,
+              {description = "Linkedin Windows Shortcut", group = "utilities"})
 )
 
 clientkeys = gears.table.join(
@@ -647,17 +647,15 @@ client.connect_signal("unfocus", function(c) c.border_color = beautiful.border_n
 -- end)
 
 
--- Boost entire process group on focus
 client.connect_signal("focus", function(c)
     if c and c.pid then
-        awful.spawn('sh -c "renice -n -9 -g $(ps -o pgid= -p ' .. c.pid .. ' | tr -d \'\')"', false)
+        awful.spawn('sh -c "renice -n -9 -g $(ps -o pgid= -p ' .. c.pid .. ' | tr -d \'\') > /dev/null 2>&1"', false)
     end
 end)
 
--- Reset process group on unfocus
 client.connect_signal("unfocus", function(c)
     if c and c.pid then
-        awful.spawn('sh -c "renice -n 0 -g $(ps -o pgid= -p ' .. c.pid .. ' | tr -d \'\')"', false)
+        awful.spawn('sh -c "renice -n 0 -g $(ps -o pgid= -p ' .. c.pid .. ' | tr -d \'\') > /dev/null 2>&1"', false)
     end
 end)
 

@@ -1,0 +1,130 @@
+#!/usr/bin/env python3
+
+import os
+import sys
+import json
+import subprocess
+
+STATE_FILE = os.path.expanduser("~/.togglectl_states.json")
+
+TOGGLE_CONFIGS = {
+    "xrandr-screens": {
+        "normal": "xrandr --output DVI-D-0 --pos 0x512   && xrandr --output DP-0 --pos 1280x0 --rotate normal",
+        "rotated": "xrandr --output DVI-D-0 --pos 0x1700 && xrandr --output DP-0 --pos 1280x0 --rotate left"
+    },
+    "activate-linux": {
+        "off": "pkill -x activate-linux",
+        "on": "activate-linux"
+    },
+    "amnezia": {
+        "off": "pkill -f /opt/AmneziaVPN/client/bin/AmneziaVPN",
+        "on": "AmneziaVPN"
+    },
+}
+
+def load_states():
+    if os.path.isfile(STATE_FILE):
+        try:
+            with open(STATE_FILE, "r") as f:
+                return json.load(f)
+        except Exception:
+            pass
+    # default all toggles to first setup
+    return {k: list(v.keys())[0] for k, v in TOGGLE_CONFIGS.items()}
+
+def save_states(states):
+    try:
+        with open(STATE_FILE, "w") as f:
+            json.dump(states, f)
+    except Exception as e:
+        print(f"Failed to save state file: {e}", file=sys.stderr)
+
+def run_cmd(cmd):
+    if not cmd.strip():
+        print("No command specified.", file=sys.stderr)
+        return False
+    try:
+        subprocess.Popen(
+            cmd,
+            shell=True,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            stdin=subprocess.DEVNULL,
+            preexec_fn=os.setpgrp
+        )
+        return True
+    except Exception as e:
+        print(f"Failed to run command: {cmd}\n{e}", file=sys.stderr)
+        return False
+
+def toggle_one(toggle):
+    if toggle not in TOGGLE_CONFIGS:
+        print(f"Unknown toggle '{toggle}'", file=sys.stderr)
+        sys.exit(1)
+
+    setups = list(TOGGLE_CONFIGS[toggle].keys())
+
+    states = load_states()
+    current = states.get(toggle, setups[0])
+    if current not in setups:
+        current = setups[0]
+
+    current_index = setups.index(current)
+    next_index = (current_index + 1) % len(setups)
+    next_setup = setups[next_index]
+
+    cmd = TOGGLE_CONFIGS[toggle][next_setup]
+    print(f"Switching '{toggle}' setup from '{current}' to '{next_setup}'...")
+    success = run_cmd(cmd)
+    if success:
+        states[toggle] = next_setup
+        save_states(states)
+        print(f"'{toggle}' is now in setup '{next_setup}'")
+    else:
+        print(f"Failed to switch '{toggle}' setup", file=sys.stderr)
+        sys.exit(1)
+
+def list_toggles():
+    print("Available toggles:")
+    for key in TOGGLE_CONFIGS.keys():
+        print(f" - {key}")
+
+def start_all():
+    states = load_states()
+    any_failed = False
+    for toggle, setups in TOGGLE_CONFIGS.items():
+        current_state = states.get(toggle, list(setups.keys())[0])
+        if current_state == "off":
+            print(f"Skipping '{toggle}' because state is 'off'.")
+            continue
+        if current_state not in setups:
+            print(f"Warning: current state '{current_state}' for toggle '{toggle}' not found in setups. Skipping.", file=sys.stderr)
+            continue
+        cmd = setups[current_state]
+        print(f"Starting '{toggle}' with setup '{current_state}'...")
+        success = run_cmd(cmd)
+        if not success:
+            print(f"Failed to start '{toggle}' with setup '{current_state}'", file=sys.stderr)
+            any_failed = True
+    if any_failed:
+        sys.exit(1)
+
+def main():
+    if len(sys.argv) != 2:
+        print(f"Usage: {sys.argv[0]} <toggle-name>|list|--start-all", file=sys.stderr)
+        list_toggles()
+        sys.exit(1)
+
+    arg = sys.argv[1]
+
+    if arg == "list":
+        list_toggles()
+        sys.exit(0)
+    elif arg == "--start-all":
+        start_all()
+        sys.exit(0)
+
+    toggle_one(arg)
+
+if __name__ == "__main__":
+    main()
