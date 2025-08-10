@@ -380,7 +380,11 @@ globalkeys = gears.table.join(
     awful.key({ modkey, "Shift", "Control" , "Mod1" }, "l", function () awful.spawn('togglectl activate-linux') end,
               {description = "Linkedin Windows Shortcut", group = "utilities"}),
     awful.key({ modkey, "Shift",}, "c",      function () awful.spawn.with_shell('xkill') end,
-              {description = "xkill", group = "utilities"})
+              {description = "xkill", group = "utilities"}),
+    awful.key({ }, "XF86MonBrightnessDown", function () awful.util.spawn("brightnessctl -10%") end,
+              {description = "brightness down", group = "utilities"}),
+    awful.key({ }, "XF86MonBrightnessUp", function () awful.util.spawn("brightnessctl +10%") end,
+              {description = "brightness up", group = "utilities"})
 )
 
 clientkeys = gears.table.join(
