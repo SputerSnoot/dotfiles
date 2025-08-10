@@ -381,9 +381,9 @@ globalkeys = gears.table.join(
               {description = "Linkedin Windows Shortcut", group = "utilities"}),
     awful.key({ modkey, "Shift",}, "c",      function () awful.spawn.with_shell('xkill') end,
               {description = "xkill", group = "utilities"}),
-    awful.key({ }, "XF86MonBrightnessDown", function () awful.util.spawn("brightnessctl 10%-") end,
+    awful.key({ }, "XF86MonBrightnessDown", function () awful.util.spawn("brightnessctl set 10%-") end,
               {description = "brightness down", group = "utilities"}),
-    awful.key({ }, "XF86MonBrightnessUp", function () awful.util.spawn("brightnessctl +10%") end,
+    awful.key({ }, "XF86MonBrightnessUp", function () awful.util.spawn("brightnessctl set +10%") end,
               {description = "brightness up", group = "utilities"})
 )
 
