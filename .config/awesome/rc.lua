@@ -14,6 +14,7 @@ local beautiful = require("beautiful")
 local naughty = require("naughty")
 local menubar = require("menubar")
 local hotkeys_popup = require("awful.hotkeys_popup")
+
 -- Enable hotkeys help widget for VIM and other apps
 -- when client with a matching name is opened:
 require("awful.hotkeys_popup.keys")
@@ -377,7 +378,9 @@ globalkeys = gears.table.join(
     awful.key({ modkey }, "`", function () awful.spawn('togglectl amnezia') end,
               {description = "Toggle VPN", group = "utilities"}),
     awful.key({ modkey, "Shift", "Control" , "Mod1" }, "l", function () awful.spawn('togglectl activate-linux') end,
-              {description = "Linkedin Windows Shortcut", group = "utilities"})
+              {description = "Linkedin Windows Shortcut", group = "utilities"}),
+    awful.key({ modkey, "Shift",}, "c",      function () awful.spawn.with_shell('xkill') end,
+              {description = "xkill", group = "utilities"})
 )
 
 clientkeys = gears.table.join(
@@ -476,7 +479,7 @@ end
 
 clientbuttons = gears.table.join(
     awful.button({ }, 1, function (c)
-        c:emit_signal("request::activate", "mouse_click", {raise = true})
+        c:emit_signal("request::activate", "mouse_click", {raise = false})
     end),
     awful.button({ modkey }, 1, function (c)
         c:emit_signal("request::activate", "mouse_click", {raise = true})
@@ -510,7 +513,8 @@ awful.rules.rules = {
             keys = clientkeys,
             buttons = clientbuttons,
             screen = awful.screen.preferred,
-            placement = awful.placement.no_overlap + awful.placement.no_offscreen
+            -- placement = awful.placement.no_overlap + awful.placement.no_offscreen
+            placement = awful.placement.under_mouse + awful.placement.no_overlap + awful.placement.no_offscreen,
         }
     },
 
@@ -561,6 +565,10 @@ awful.rules.rules = {
     {
         rule_any = { name = { "Media viewer" } },
         properties = { placement = function() end }
+    },
+    {
+        rule_any = { name = { "AmneziaVPN" } },
+        properties = { placement = awful.placement.centered }
     },
     
     -- Set Firefox to always map on the tag named "2" on screen 1.
