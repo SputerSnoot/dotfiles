@@ -1,1 +1,1 @@
-feh --fontpath /usr/share/fonts/TTF --font JetBrainsMonoNerdFont-Regular/16 --scale-down --draw-filename --info "exiftool %f | grep 'Date/Time'"
+feh --fontpath /usr/share/fonts/TTF --font JetBrainsMonoNerdFont-Regular/12 --scale-down --draw-filename --info "exiftool %f

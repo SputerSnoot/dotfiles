@@ -167,6 +167,20 @@ end
 -- Re-set wallpaper when a screen's geometry changes (e.g. different resolution)
 screen.connect_signal("property::geometry", set_wallpaper)
 
+
+local function get_rightmost_screen()
+    local rightmost = nil
+    local maxx = -math.huge
+    for s in screen do
+        if s.geometry.x > maxx then
+            maxx = s.geometry.x
+            rightmost = s
+        end
+    end
+    return rightmost
+end
+
+
 awful.screen.connect_for_each_screen(function(s)
     -- Wallpaper
     set_wallpaper(s)
@@ -174,16 +188,42 @@ awful.screen.connect_for_each_screen(function(s)
     -- Each screen has its own tag table.
     awful.tag({ "1", "2", "3", "4", "5", "6", "7", "8"}, s, awful.layout.layouts[2])
 
+    -- Determine the rightmost screen
+    local rightmost = screen.primary
+    local maxx = -math.huge
+    for scr in screen do
+        if scr.geometry.x > maxx then
+            maxx = scr.geometry.x
+            rightmost = scr
+        end
+    end
+
+    -- Apply special settings to the rightmost screen
+    if s == rightmost then
+        for _, t in ipairs(s.tags) do
+            t.master_count = 0
+
+            local is_vertical = s.geometry.height > s.geometry.width
+            if is_vertical then
+                t.layout = awful.layout.suit.tile
+            else
+                t.layout = awful.layout.suit.tile.bottom
+            end
+        end
+    end
+
     -- Create a promptbox for each screen
     s.mypromptbox = awful.widget.prompt()
+
     -- Create an imagebox widget which will contain an icon indicating which layout we're using.
-    -- We need one layoutbox per screen.
     s.mylayoutbox = awful.widget.layoutbox(s)
     s.mylayoutbox:buttons(gears.table.join(
-                           awful.button({ }, 1, function () awful.layout.inc( 1) end),
-                           awful.button({ }, 3, function () awful.layout.inc(-1) end),
-                           awful.button({ }, 4, function () awful.layout.inc( 1) end),
-                           awful.button({ }, 5, function () awful.layout.inc(-1) end)))
+        awful.button({ }, 1, function () awful.layout.inc( 1) end),
+        awful.button({ }, 3, function () awful.layout.inc(-1) end),
+        awful.button({ }, 4, function () awful.layout.inc( 1) end),
+        awful.button({ }, 5, function () awful.layout.inc(-1) end)
+    ))
+
     -- Create a taglist widget
     s.mytaglist = awful.widget.taglist {
         screen  = s,
@@ -236,6 +276,8 @@ awful.screen.connect_for_each_screen(function(s)
         },
     }
 end)
+
+
 -- }}}
 
 -- {{{ Mouse bindings
@@ -353,8 +395,30 @@ globalkeys = gears.table.join(
               {description = "show the browser", group = "utilities"}),
     awful.key({ modkey }, "e", function () awful.spawn('nemo') end,
               {description = "nemo", group = "utilities"}),
-    awful.key({ modkey }, "0", function () awful.spawn('togglectl xrandr-screens') end,
-              {description = "toggle rotated/normal screen", group = "utilities"}),
+    awful.key({ modkey }, "0",
+        function ()
+            awful.spawn.easy_async("togglectl xrandr-screens",
+                function(stdout, stderr, reason, exit_code)
+                    if exit_code ~= 0 then
+                        naughty.notify { text = "togglectl failed: " .. stderr }
+                        return
+                    end
+
+                    local lastline = stdout:match("([^\n]+)%s*$")
+                    local right = get_rightmost_screen()
+
+                    for _, t in ipairs(right.tags) do
+                        if lastline == "rotated" then
+                            t.layout = awful.layout.suit.tile
+                        elseif lastline == "normal" then
+                            t.layout = awful.layout.suit.tile.bottom
+                        end
+                    end
+                end
+            )
+        end,
+        {description = "toggle rotated/normal screen", group = "utilities"}
+    ),
     -- awful.key({}, "XF86AudioRaiseVolume", function () awful.spawn('wpctl set-volume @DEFAULT_SINK@ 5%+') end,
     --           {description = "Raise volume", group = "utilities"}),
     -- awful.key({}, "XF86AudioLowerVolume", function () awful.spawn('wpctl set-volume @DEFAULT_SINK@ 5%-') end,
@@ -495,10 +559,6 @@ clientbuttons = gears.table.join(
     end)
 )
 
-function placement_telegram_media(d, args)
-    return {0,0,400,400}
-end
-
 -- Set keys
 root.keys(globalkeys)
 -- }}}
@@ -550,7 +610,6 @@ awful.rules.rules = {
             role = {
                 "AlarmWindow", -- Thunderbird's calendar.
                 "ConfigManager", -- Thunderbird's about:config.
-                "pop-up",  -- e.g. Google Chrome's (detached) Developer Tools.
             }
         },
         properties = { floating = true }
@@ -643,21 +702,6 @@ end)
 
 client.connect_signal("focus", function(c) c.border_color = beautiful.border_focus end)
 client.connect_signal("unfocus", function(c) c.border_color = beautiful.border_normal end)
-
--- -- -- Decrease niceness for focused client (higher CPU priority)
--- client.connect_signal("focus", function(c)
---     if c and c.pid then
---         awful.spawn("renice -n -9 -p " .. c.pid, false)
---     end
--- end)
-
--- -- Reset niceness when clients lose focus (optional)
--- client.connect_signal("unfocus", function(c)
---     if c and c.pid then
---         awful.spawn("renice -n 0 -p " .. c.pid, false)
---     end
--- end)
-
 
 client.connect_signal("focus", function(c)
     if c and c.pid then

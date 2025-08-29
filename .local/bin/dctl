@@ -118,8 +118,23 @@ def display_all_files(paths: list[Path]):
     for file_path in files:
         print(format_file_entry(file_path, max_path_len))
 
+def parse_header_options(header_text: str) -> tuple[Path | None, str | None]:
+    """Parse SavePath and SaveFilename from header text."""
+    save_path, save_filename = None, None
+    for line in header_text.splitlines():
+        line = line.strip()
+        if not line or line.startswith("#"):
+            continue
+        if line.startswith("SavePath ="):
+            raw = line.partition("=")[2].strip()
+            save_path = Path(raw).expanduser()
+        elif line.startswith("SaveFilename ="):
+            save_filename = line.partition("=")[2].strip()
+    return save_path, save_filename
+
+
 def edit_desktop_file(query: str, search_paths: list[Path], override_dir: Path):
-    """Edit a .desktop file with override capability."""
+    """Edit a .desktop file with override capability + header options."""
     matches = find_matching_files(query, search_paths)
     if not matches:
         print(f"No match found for '{query}'")
@@ -132,10 +147,20 @@ def edit_desktop_file(query: str, search_paths: list[Path], override_dir: Path):
     print(f"Original file: {original_path}")
     print(f"Override file: {override_path}")
 
+    # Prepare header + body
+    header = (
+        f"# Original file: {original_path}\n"
+        f"SavePath = {override_dir}\n"
+        f"# SavePath = ~/.config/autostart/\n"
+        f"SaveFilename = {original_path.name}\n\n"
+        "# Anything above will not be included in the .desktop file\n"
+    )
+    body = original_path.read_text(encoding="utf-8")
+
     # Create descriptive temp file name
     source_tag = "@usr" if "/usr/" in str(original_path) else "@home"
-    temp_prefix = f"{source_tag} {original_path.name} "
-    
+    temp_prefix = f"{source_tag} {original_path.stem} "
+
     with tempfile.NamedTemporaryFile(
         mode="w+",
         delete=False,
@@ -144,7 +169,7 @@ def edit_desktop_file(query: str, search_paths: list[Path], override_dir: Path):
         dir="/tmp"
     ) as tmp_file:
         tmp_path = Path(tmp_file.name)
-        tmp_file.write(original_path.read_text(encoding="utf-8"))
+        tmp_file.write(header + body)
         tmp_file.flush()
 
     print(f"Opening editor: {tmp_path}")
@@ -154,13 +179,38 @@ def edit_desktop_file(query: str, search_paths: list[Path], override_dir: Path):
         print("Edit cancelled, no changes saved")
         return
 
+    edited_text = tmp_path.read_text(encoding="utf-8")
+
+    # Split header and body back
+    if "\n[Desktop Entry]" in edited_text:
+        header_part, body_part = edited_text.split("\n[Desktop Entry]", 1)
+        body_part = "[Desktop Entry]" + body_part
+    else:
+        print("Invalid file format: missing [Desktop Entry]")
+        tmp_path.unlink()
+        return
+
+    save_path, save_filename = parse_header_options(header_part)
+    if not save_path:
+        save_path = override_dir
+    if not save_filename:
+        save_filename = original_path.name
+
+    save_path.mkdir(parents=True, exist_ok=True)
+    final_path = save_path / save_filename
+
+    # If unchanged compared to original, don’t save
     if filecmp.cmp(tmp_path, original_path, shallow=False):
         print("No changes detected")
         tmp_path.unlink()
         return
 
-    shutil.move(str(tmp_path), str(override_path))
-    print(f"Override saved to: {override_path}")
+    final_path.write_text(body_part, encoding="utf-8")
+    tmp_path.unlink()
+    print(f"Override saved to: {final_path}")
+
+
+
 
 # Command handlers
 def handle_dfind(query: str, debug: bool = False):

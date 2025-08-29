@@ -79,10 +79,15 @@ def toggle_one(toggle):
     if success:
         states[toggle] = next_setup
         save_states(states)
-        print(f"'{toggle}' is now in setup '{next_setup}'")
+        # human readable
+        print(f"Switch complete: '{toggle}' is now in setup '{next_setup}'")
+        # machine parsable (always last line, no extra formatting)
+        print(next_setup)
+        sys.exit(0)
     else:
         print(f"Failed to switch '{toggle}' setup", file=sys.stderr)
         sys.exit(1)
+
 
 def list_toggles():
     print("Available toggles:")
